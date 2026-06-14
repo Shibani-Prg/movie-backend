@@ -5,7 +5,7 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
-const API_KEY = "YOUR_API_KEY";
+const API_KEY = "cafd1dd89b09980ab77cf23458aeacd2";
 
 // 🎬 MOVIES ROUTE
 app.get("/movies", async (req, res) => {
