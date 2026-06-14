@@ -5,9 +5,29 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
-const API_KEY = "cafd1dd89b09980ab77cf23458aeacd2";
+const API_KEY = "YOUR_API_KEY";
 
-// 🔍 SEARCH ROUTE (ADD THIS BELOW /movies)
+// 🎬 MOVIES ROUTE
+app.get("/movies", async (req, res) => {
+  try {
+    const response = await axios.get(
+      `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "application/json",
+        },
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("MOVIES ERROR:", error.message);
+    res.status(500).json({ error: "Failed to fetch movies" });
+  }
+});
+
+// 🔍 SEARCH ROUTE
 app.get("/search", async (req, res) => {
   try {
     const query = req.query.q;
@@ -29,6 +49,8 @@ app.get("/search", async (req, res) => {
   }
 });
 
-app.listen(5000, () => {
-  console.log("Server running on http://localhost:5000");
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
