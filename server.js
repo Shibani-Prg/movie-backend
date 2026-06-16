@@ -1,6 +1,10 @@
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first"); // 🔥 FORCE IPV4
+
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
+const https = require("https");
 require("dotenv").config();
 
 const app = express();
@@ -8,164 +12,178 @@ app.use(cors());
 
 const API_KEY = process.env.TMDB_API_KEY;
 
-// 🎬 MOVIES ROUTE
+console.log("API KEY:", API_KEY);
+
+// 🔥 AXIOS CONFIG (FIXED)
+const api = axios.create({
+  baseURL: "https://api.themoviedb.org/3",
+  timeout: 15000,
+  httpsAgent: new https.Agent({ family: 4 }), // 🔥 FORCE IPV4
+  params: {
+    api_key: API_KEY,
+  },
+});
+
+// 🎬 POPULAR
 app.get("/movies", async (req, res) => {
   try {
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}`
-    );
-    res.json(response.data);
-  } catch (error) {
-    console.error("MOVIES ERROR:", error.message);
-    res.status(500).json({ error: "Failed to fetch movies" });
+    const { data } = await api.get("/movie/popular");
+    res.json(data);
+  } catch (err) {
+    console.error("MOVIES ERROR:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// 🔍 SEARCH ROUTE
+// 🔍 SEARCH
 app.get("/search", async (req, res) => {
   try {
-    const query = req.query.q;
-
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`
-    );
-
-    res.json(response.data);
-  } catch (error) {
-    console.error("SEARCH ERROR:", error.message);
-    res.status(500).json({ error: "Search failed" });
+    const { data } = await api.get("/search/movie", {
+      params: { query: req.query.q },
+    });
+    res.json(data);
+  } catch (err) {
+    console.error("SEARCH ERROR:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// 🎥 MOVIE DETAILS ROUTE ✅ (moved up)
+// 🎥 DETAILS
 app.get("/movie/:id", async (req, res) => {
   try {
-    const id = req.params.id;
-
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}`
-    );
-
-    res.json(response.data);
-  } catch (error) {
-    console.error("DETAILS ERROR:", error.message);
-    res.status(500).json({ error: "Failed to fetch movie details" });
+    const { data } = await api.get(`/movie/${req.params.id}`);
+    res.json(data);
+  } catch (err) {
+    console.error("DETAILS ERROR:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
-// 🎭 MOOD / GENRE ROUTE
+
+// 🎭 GENRE
 app.get("/movies/genre/:id", async (req, res) => {
   try {
-    const genreId = req.params.id;
-
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=${genreId}&region=IN&sort_by=popularity.desc`
-    );
-
-    res.json(response.data);
-  } catch (error) {
-    console.error("GENRE ERROR:", error.message);
-    res.status(500).json({ error: "Failed to fetch genre movies" });
+    const { data } = await api.get("/discover/movie", {
+      params: {
+        with_genres: req.params.id,
+        region: "IN",
+      },
+    });
+    res.json(data);
+  } catch (err) {
+    console.error("GENRE ERROR:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
+
 // ⭐ TOP RATED
 app.get("/movies/top-rated", async (req, res) => {
   try {
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}`
-    );
-    res.json(response.data);
+    const { data } = await api.get("/movie/top_rated");
+    res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Top rated fetch failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// 🎬 HOLLYWOOD
-app.get("/movies/hollywood", async (req, res) => {
-  try {
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=en&sort_by=vote_average.desc&vote_count.gte=1000`
-    );
-    res.json(response.data);
-  } catch (err) {
-    res.status(500).json({ error: "Hollywood fetch failed" });
-  }
-});
 
-// 🎥 BOLLYWOOD
-app.get("/movies/bollywood", async (req, res) => {
-  try {
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=hi&region=IN&sort_by=vote_average.desc&vote_count.gte=200`
-    );
-    res.json(response.data);
-  } catch (err) {
-    res.status(500).json({ error: "Bollywood fetch failed" });
-  }
-});
-// 🔥 TRENDING HOLLYWOOD
-app.get("/movies/trending/hollywood", async (req, res) => {
-  try {
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=en&sort_by=popularity.desc`
-    );
-    res.json(response.data);
-  } catch {
-    res.status(500).json({ error: "Hollywood trending failed" });
-  }
-});
+// 🔥 PAGINATION ROUTES
 
-// 🇮🇳 TRENDING BOLLYWOOD
-app.get("/movies/trending/bollywood", async (req, res) => {
-  try {
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=hi&region=IN&sort_by=popularity.desc`
-    );
-    res.json(response.data);
-  } catch {
-    res.status(500).json({ error: "Bollywood trending failed" });
-  }
-});
-
-// 🎬 TRENDING SOUTH
-app.get("/movies/trending/south", async (req, res) => {
-  try {
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=te&region=IN&sort_by=popularity.desc`
-    );
-    res.json(response.data);
-  } catch {
-    res.status(500).json({ error: "South trending failed" });
-  }
-});
-
-// 🐭 TRENDING ANIMATED
-app.get("/movies/trending/animated", async (req, res) => {
-  try {
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_genres=16&sort_by=popularity.desc`
-    );
-    res.json(response.data);
-  } catch {
-    res.status(500).json({ error: "Animated trending failed" });
-  }
-});
-
-// 🇮🇳 BOLLYWOOD PAGINATION
+// 🇮🇳 Bollywood
 app.get("/movies/bollywood/page/:page", async (req, res) => {
   try {
-    const page = req.params.page;
-
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&with_original_language=hi&sort_by=popularity.desc&page=${page}`
-    );
-
-    res.json(response.data);
-  } catch {
-    res.status(500).json({ error: "Bollywood page fetch failed" });
+    const { data } = await api.get("/discover/movie", {
+      params: {
+        with_original_language: "hi",
+        page: req.params.page,
+      },
+    });
+    res.json(data);
+  } catch (err) {
+    console.error("BOLLYWOOD ERROR:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// 🚀 START SERVER (always last)
+// 🎬 Hollywood
+app.get("/movies/hollywood/page/:page", async (req, res) => {
+  try {
+    const { data } = await api.get("/discover/movie", {
+      params: {
+        with_original_language: "en",
+        page: req.params.page,
+      },
+    });
+    res.json(data);
+  } catch (err) {
+    console.error("HOLLYWOOD ERROR:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🇰🇷 Korean
+app.get("/movies/korean/page/:page", async (req, res) => {
+  try {
+    const { data } = await api.get("/discover/movie", {
+      params: {
+        with_original_language: "ko",
+        page: req.params.page,
+      },
+    });
+    res.json(data);
+  } catch (err) {
+    console.error("KOREAN ERROR:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🇹🇭 Thai
+app.get("/movies/thai/page/:page", async (req, res) => {
+  try {
+    const { data } = await api.get("/discover/movie", {
+      params: {
+        with_original_language: "th",
+        page: req.params.page,
+      },
+    });
+    res.json(data);
+  } catch (err) {
+    console.error("THAI ERROR:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🎬 South
+app.get("/movies/south/page/:page", async (req, res) => {
+  try {
+    const langs = ["te", "ta", "ml", "kn"];
+
+    const requests = langs.map((lang) =>
+      api.get("/discover/movie", {
+        params: {
+          with_original_language: lang,
+          page: req.params.page,
+        },
+      })
+    );
+
+    const responses = await Promise.all(requests);
+
+    const movies = responses.flatMap((r) => r.data.results);
+
+    const unique = Array.from(
+      new Map(movies.map((m) => [m.id, m])).values()
+    );
+
+    res.json({ results: unique });
+
+  } catch (err) {
+    console.error("SOUTH ERROR:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// 🚀 START SERVER
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
