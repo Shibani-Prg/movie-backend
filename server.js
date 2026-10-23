@@ -12,7 +12,7 @@ app.use(cors());
 
 const API_KEY = process.env.TMDB_API_KEY;
 
-console.log("API KEY:", API_KEY);
+// console.log("API KEY:", API_KEY);
 
 // 🔥 AXIOS CONFIG
 const api = axios.create({
